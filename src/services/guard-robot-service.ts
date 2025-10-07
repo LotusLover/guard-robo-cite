@@ -1,4 +1,4 @@
-import { ref as dbRef, push, set, onValue, off, goOffline, goOnline, DataSnapshot, DatabaseError } from 'firebase/database'
+import { ref as dbRef, push, set, onValue, off, goOffline, goOnline, DataSnapshot } from 'firebase/database'
 import { database, monitorNetworkStatus } from '../firebase'
 import type { GuardRobotAlert, GuardRobotStatus } from '../types/guard-robot'
 
@@ -66,7 +66,7 @@ export class GuardRobotService {
           console.log(connected ? '✅ Firebase接続成功' : '❌ Firebase接続失敗')
           unsubscribe()
           resolve(connected)
-        }, (error: DatabaseError) => {
+        }, (error: Error) => {
           console.error('❌ Firebase接続テストエラー:', error)
           unsubscribe()
           resolve(false)
@@ -91,7 +91,7 @@ export class GuardRobotService {
           console.log(`📡 アラートデータを受信: ${alerts.length}件`)
           this.alertsCallbacks.forEach(callback => callback(alerts))
         },
-        (error: DatabaseError) => {
+        (error: Error) => {
           console.error('❌ アラートリスナーエラー:', error)
           if (!this.isOnline) {
             console.log('📱 オフラインモード: ローカルキャッシュを使用')
@@ -109,7 +109,7 @@ export class GuardRobotService {
           console.log(`🤖 ロボットデータを受信: ${robots.length}台`)
           this.robotsCallbacks.forEach(callback => callback(robots))
         },
-        (error: DatabaseError) => {
+        (error: Error) => {
           console.error('❌ ロボットリスナーエラー:', error)
           if (!this.isOnline) {
             console.log('📱 オフラインモード: ローカルキャッシュを使用')

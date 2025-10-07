@@ -7,6 +7,7 @@
 ```
 Error: src/firebase.ts(2,31): error TS2307: Cannot find module 'firebase/app' or its corresponding type declarations.
 Error: src/firebase.ts(3,54): error TS2307: Cannot find module 'firebase/database' or its corresponding type declarations.
+Error: src/services/guard-robot-service.ts(1,84): error TS2305: Module '"firebase/database"' has no exported member 'DatabaseError'.
 ```
 
 ## 原因
@@ -14,6 +15,7 @@ Error: src/firebase.ts(3,54): error TS2307: Cannot find module 'firebase/databas
 1. Firebase SDKが `package.json` の `dependencies` に含まれていなかった
 2. `npm install` を実行していなかった
 3. TypeScriptの厳格な型チェック設定
+4. `DatabaseError` 型が Firebase SDK v11 では存在しない（v9以降で削除）
 
 ## 修正手順
 
@@ -75,19 +77,21 @@ npm run build
 ### 2. TypeScript型定義の追加
 `src/services/guard-robot-service.ts`:
 ```typescript
-// 型定義をインポート
+// 型定義をインポート（DatabaseErrorは削除）
 import { 
-  DataSnapshot, 
-  DatabaseError 
+  DataSnapshot 
 } from 'firebase/database'
 
-// コールバック関数に型を明示
+// コールバック関数に型を明示（Errorを使用）
 onValue(ref, (snapshot: DataSnapshot) => {
   // ...
-}, (error: DatabaseError) => {
+}, (error: Error) => {  // DatabaseError → Error に変更
   // ...
 })
 ```
+
+**注意**: Firebase SDK v11 では `DatabaseError` 型は存在しません。
+通常の `Error` 型を使用してください。
 
 ### 3. 型アサーションの追加
 ```typescript

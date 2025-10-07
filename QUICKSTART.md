@@ -83,6 +83,17 @@ npm install
 npm run build
 ```
 
+### エラー: "Module has no exported member 'DatabaseError'"
+
+**原因**: Firebase SDK v11 では `DatabaseError` 型が存在しない
+
+**解決**: 既に修正済みです。最新のコードをプルしてください。
+```bash
+git pull origin main
+npm install
+npm run build
+```
+
 ### エラー: "404 Not Found"
 
 **原因**: GitHub Pages の設定が間違っている
