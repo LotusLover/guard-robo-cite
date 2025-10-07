@@ -1,4 +1,4 @@
-import { ref as dbRef, push, set, onValue, off, goOffline, goOnline } from 'firebase/database'
+import { ref as dbRef, push, set, onValue, off, goOffline, goOnline, DataSnapshot, DatabaseError } from 'firebase/database'
 import { database, monitorNetworkStatus } from '../firebase'
 import type { GuardRobotAlert, GuardRobotStatus } from '../types/guard-robot'
 
@@ -61,12 +61,12 @@ export class GuardRobotService {
       // 接続テスト用の軽量なデータ読み取り
       const testRef = dbRef(database, '.info/connected')
       return new Promise((resolve) => {
-        const unsubscribe = onValue(testRef, (snapshot) => {
+        const unsubscribe = onValue(testRef, (snapshot: DataSnapshot) => {
           const connected = snapshot.val()
           console.log(connected ? '✅ Firebase接続成功' : '❌ Firebase接続失敗')
           unsubscribe()
           resolve(connected)
-        }, (error) => {
+        }, (error: DatabaseError) => {
           console.error('❌ Firebase接続テストエラー:', error)
           unsubscribe()
           resolve(false)
@@ -85,13 +85,13 @@ export class GuardRobotService {
     try {
       // アラートの変更を監視
       onValue(this.alertsRef, 
-        (snapshot) => {
+        (snapshot: DataSnapshot) => {
           const data = snapshot.val()
           const alerts: GuardRobotAlert[] = data ? Object.values(data) : []
           console.log(`📡 アラートデータを受信: ${alerts.length}件`)
           this.alertsCallbacks.forEach(callback => callback(alerts))
         },
-        (error) => {
+        (error: DatabaseError) => {
           console.error('❌ アラートリスナーエラー:', error)
           if (!this.isOnline) {
             console.log('📱 オフラインモード: ローカルキャッシュを使用')
@@ -103,13 +103,13 @@ export class GuardRobotService {
 
       // ロボット状態の変更を監視
       onValue(this.robotsRef, 
-        (snapshot) => {
+        (snapshot: DataSnapshot) => {
           const data = snapshot.val()
           const robots: GuardRobotStatus[] = data ? Object.values(data) : []
           console.log(`🤖 ロボットデータを受信: ${robots.length}台`)
           this.robotsCallbacks.forEach(callback => callback(robots))
         },
-        (error) => {
+        (error: DatabaseError) => {
           console.error('❌ ロボットリスナーエラー:', error)
           if (!this.isOnline) {
             console.log('📱 オフラインモード: ローカルキャッシュを使用')
@@ -121,7 +121,7 @@ export class GuardRobotService {
 
       // Firebase接続状態の監視
       const connectedRef = dbRef(database, '.info/connected')
-      onValue(connectedRef, (snapshot) => {
+      onValue(connectedRef, (snapshot: DataSnapshot) => {
         const connected = snapshot.val()
         if (connected) {
           console.log('🔗 Firebase Realtime Database に接続されました')
@@ -395,11 +395,15 @@ export class GuardRobotService {
         const severities: GuardRobotAlert['severity'][] = ['low', 'medium', 'high', 'critical']
         const locations = ['1階エントランス', '2階廊下', '駐車場', '裏口', '屋上']
         
+        const randomType = alertTypes[Math.floor(Math.random() * alertTypes.length)] as GuardRobotAlert['type']
+        const randomSeverity = severities[Math.floor(Math.random() * severities.length)] as GuardRobotAlert['severity']
+        const randomLocation = locations[Math.floor(Math.random() * locations.length)] as string
+        
         const newAlert: Omit<GuardRobotAlert, 'id'> = {
           timestamp: Date.now(),
-          type: alertTypes[Math.floor(Math.random() * alertTypes.length)],
-          severity: severities[Math.floor(Math.random() * severities.length)],
-          location: locations[Math.floor(Math.random() * locations.length)],
+          type: randomType,
+          severity: randomSeverity,
+          location: randomLocation,
           description: 'ランダムに生成されたテストアラートです',
           status: 'active'
         }
