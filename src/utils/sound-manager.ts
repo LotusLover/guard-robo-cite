@@ -26,7 +26,7 @@ export class SoundManager {
   /**
    * ビープ音を生成して再生
    */
-  private playBeep(frequency: number, duration: number, volume: number = 0.3) {
+  private playBeep(frequency: number, duration: number, volume: number = 0.3, type: OscillatorType = 'sine') {
     if (this.isMuted) return
 
     this.initAudioContext()
@@ -44,7 +44,7 @@ export class SoundManager {
       gainNode.connect(this.audioContext.destination)
 
       oscillator.frequency.value = frequency
-      oscillator.type = 'sine'
+      oscillator.type = type // 'sine', 'square', 'sawtooth', 'triangle'
 
       gainNode.gain.setValueAtTime(volume, this.audioContext.currentTime)
       gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + duration)
@@ -60,68 +60,83 @@ export class SoundManager {
    * 通常アラート音（低）
    */
   playLowAlert() {
-    this.playBeep(400, 0.2)
+    this.playBeep(500, 0.3, 0.35)
+    setTimeout(() => this.playBeep(500, 0.2, 0.25), 400)
   }
 
   /**
    * 通常アラート音（中）
    */
   playMediumAlert() {
-    this.playBeep(600, 0.15)
-    setTimeout(() => this.playBeep(600, 0.15), 150)
+    this.playBeep(700, 0.25, 0.4)
+    setTimeout(() => this.playBeep(700, 0.25, 0.4), 300)
+    setTimeout(() => this.playBeep(850, 0.3, 0.35), 650)
   }
 
   /**
    * 警告アラート音（高）
    */
   playHighAlert() {
-    this.playBeep(800, 0.12)
-    setTimeout(() => this.playBeep(800, 0.12), 120)
-    setTimeout(() => this.playBeep(800, 0.12), 240)
+    // 上昇パターンで緊迫感（sawtooth波でより目立つ）
+    this.playBeep(800, 0.2, 0.4, 'sawtooth')
+    setTimeout(() => this.playBeep(900, 0.2, 0.4, 'sawtooth'), 250)
+    setTimeout(() => this.playBeep(1000, 0.2, 0.4, 'sawtooth'), 500)
+    setTimeout(() => this.playBeep(1100, 0.3, 0.45, 'sawtooth'), 750)
   }
 
   /**
    * 緊急アラート音（緊急）
    */
   playCriticalAlert() {
-    // サイレン風の音
-    this.playBeep(1000, 0.3, 0.4)
-    setTimeout(() => this.playBeep(800, 0.3, 0.4), 300)
-    setTimeout(() => this.playBeep(1000, 0.3, 0.4), 600)
+    // 強力なサイレン風の音（より長く、より目立つ）
+    // square波でより鋭く目立つ音に
+    this.playBeep(1200, 0.35, 0.5, 'square')
+    setTimeout(() => this.playBeep(800, 0.35, 0.5, 'square'), 400)
+    setTimeout(() => this.playBeep(1200, 0.35, 0.5, 'square'), 800)
+    setTimeout(() => this.playBeep(800, 0.35, 0.5, 'square'), 1200)
+    setTimeout(() => this.playBeep(1200, 0.4, 0.55, 'square'), 1600)
+    setTimeout(() => this.playBeep(800, 0.4, 0.55, 'square'), 2050)
   }
 
   /**
    * 成功音
    */
   playSuccess() {
-    this.playBeep(523.25, 0.1) // C5
-    setTimeout(() => this.playBeep(659.25, 0.1), 100) // E5
-    setTimeout(() => this.playBeep(783.99, 0.15), 200) // G5
+    // より華やかな成功音
+    this.playBeep(523.25, 0.12, 0.35) // C5
+    setTimeout(() => this.playBeep(659.25, 0.12, 0.35), 120) // E5
+    setTimeout(() => this.playBeep(783.99, 0.15, 0.4), 240) // G5
+    setTimeout(() => this.playBeep(1046.50, 0.25, 0.4), 400) // C6（高いド）
   }
 
   /**
    * エラー音
    */
   playError() {
-    this.playBeep(300, 0.3, 0.3)
-    setTimeout(() => this.playBeep(250, 0.3, 0.3), 300)
+    // より目立つエラー音
+    this.playBeep(350, 0.25, 0.4)
+    setTimeout(() => this.playBeep(300, 0.25, 0.4), 280)
+    setTimeout(() => this.playBeep(250, 0.35, 0.45), 560)
   }
 
   /**
    * 情報音（軽い通知）
    */
   playInfo() {
-    this.playBeep(800, 0.1, 0.2)
+    this.playBeep(900, 0.15, 0.25)
+    setTimeout(() => this.playBeep(1000, 0.12, 0.2), 180)
   }
 
   /**
    * システム起動音
    */
   playSystemStart() {
-    this.playBeep(440, 0.1) // A4
-    setTimeout(() => this.playBeep(554.37, 0.1), 100) // C#5
-    setTimeout(() => this.playBeep(659.25, 0.1), 200) // E5
-    setTimeout(() => this.playBeep(880, 0.2), 300) // A5
+    // より壮大な起動音
+    this.playBeep(440, 0.15, 0.3) // A4
+    setTimeout(() => this.playBeep(554.37, 0.15, 0.3), 150) // C#5
+    setTimeout(() => this.playBeep(659.25, 0.15, 0.35), 300) // E5
+    setTimeout(() => this.playBeep(880, 0.2, 0.4), 450) // A5
+    setTimeout(() => this.playBeep(1046.50, 0.3, 0.45), 650) // C6（フィニッシュ）
   }
 
   /**
