@@ -188,6 +188,7 @@
 import { ref, computed } from 'vue'
 import type { GuardRobotAlert, GuardRobotStatus } from '../types/guard-robot'
 import { guardRobotService } from '../services/guard-robot-service'
+import { soundManager } from '../utils/sound-manager'
 
 // 状態管理
 const isExpanded = ref(false)
@@ -222,6 +223,15 @@ const addLog = (message: string, type: 'success' | 'error' | 'info' = 'info') =>
   // 最新10件のみ保持
   if (statusLogs.value.length > 10) {
     statusLogs.value = statusLogs.value.slice(0, 10)
+  }
+  
+  // 通知音を再生
+  if (type === 'success') {
+    soundManager.playSuccess()
+  } else if (type === 'error') {
+    soundManager.playError()
+  } else {
+    soundManager.playInfo()
   }
 }
 

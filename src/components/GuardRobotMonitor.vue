@@ -15,6 +15,13 @@
           <span class="status-label">接続状態:</span>
           <span class="status-value">{{ networkStatus.isOnline ? 'オンライン' : 'オフライン' }}</span>
         </div>
+        <button 
+          class="sound-toggle-btn"
+          @click="toggleSound"
+          :title="isSoundMuted ? '通知音をオンにする' : '通知音をオフにする'"
+        >
+          {{ isSoundMuted ? '🔇' : '🔊' }}
+        </button>
       </div>
     </header>
 
@@ -85,14 +92,17 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import type { GuardRobotAlert, GuardRobotStatus } from '../types/guard-robot'
 import { guardRobotService } from '../services/guard-robot-service'
+import { soundManager } from '../utils/sound-manager'
 
 // リアクティブデータ
 const robots = ref<GuardRobotStatus[]>([])
 const alerts = ref<GuardRobotAlert[]>([])
 const networkStatus = ref({ isOnline: true, lastUpdated: Date.now() })
+const isSoundMuted = ref(false)
+const previousAlertCount = ref(0)
 
 // 計算プロパティ
 const totalRobots = computed(() => robots.value.length)
@@ -156,9 +166,34 @@ const getStatusText = (status: string): string => {
   return texts[status as keyof typeof texts] || '不明'
 }
 
+// 音声ミュート切り替え
+const toggleSound = () => {
+  isSoundMuted.value = soundManager.toggleMute()
+}
+
+// アラート数の変化を監視して通知音を再生
+watch(() => alerts.value.length, (newCount, oldCount) => {
+  if (newCount > oldCount && previousAlertCount.value > 0) {
+    // 新しいアラートが追加された
+    const newAlert = alerts.value[0] // 最新のアラート
+    if (newAlert && !isSoundMuted.value) {
+      console.log(`🔔 新しいアラート検知: ${newAlert.description}`)
+      soundManager.playAlertSound(newAlert.severity)
+    }
+  }
+  previousAlertCount.value = newCount
+})
+
 // ライフサイクル
 onMounted(() => {
   console.log('🚀 GuardRobotMonitor コンポーネントを初期化中...')
+  
+  // システム起動音を再生
+  setTimeout(() => {
+    if (!isSoundMuted.value) {
+      soundManager.playSystemStart()
+    }
+  }, 500)
   
   // サービスからのリアルタイム更新を監視
   unsubscribeAlerts = guardRobotService.onAlertsChange((newAlerts) => {
@@ -234,6 +269,7 @@ onUnmounted(() => {
 .status-summary {
   display: flex;
   justify-content: center;
+  align-items: center;
   gap: 2rem;
   flex-wrap: wrap;
 }
@@ -246,6 +282,29 @@ onUnmounted(() => {
   background: rgba(255, 255, 255, 0.1);
   border-radius: 8px;
   min-width: 120px;
+}
+
+.sound-toggle-btn {
+  font-size: 1.5rem;
+  background: rgba(255, 255, 255, 0.2);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  width: 50px;
+  height: 50px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sound-toggle-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: scale(1.1);
+}
+
+.sound-toggle-btn:active {
+  transform: scale(0.95);
 }
 
 .status-label {
