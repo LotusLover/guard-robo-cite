@@ -1,0 +1,61 @@
+{
+  "rules": {
+    ".read": true,
+    ".write": false,
+    
+    "alerts": {
+      ".read": true,
+      ".write": false,
+      "$alertId": {
+        ".validate": "newData.hasChildren(['id', 'timestamp', 'type', 'severity', 'location', 'description', 'status'])",
+        "id": {
+          ".validate": "newData.isString()"
+        },
+        "timestamp": {
+          ".validate": "newData.isNumber() && newData.val() <= now"
+        },
+        "type": {
+          ".validate": "newData.isString() && newData.val().matches(/^(motion|sound|breach|system)$/)"
+        },
+        "severity": {
+          ".validate": "newData.isString() && newData.val().matches(/^(low|medium|high|critical)$/)"
+        },
+        "location": {
+          ".validate": "newData.isString() && newData.val().length > 0"
+        },
+        "description": {
+          ".validate": "newData.isString() && newData.val().length > 0"
+        },
+        "status": {
+          ".validate": "newData.isString() && newData.val().matches(/^(active|acknowledged|resolved)$/)"
+        }
+      }
+    },
+    
+    "robots": {
+      ".read": true,
+      ".write": false,
+      "$robotId": {
+        ".validate": "newData.hasChildren(['id', 'name', 'location', 'isOnline', 'batteryLevel', 'lastHeartbeat'])",
+        "id": {
+          ".validate": "newData.isString()"
+        },
+        "name": {
+          ".validate": "newData.isString() && newData.val().length > 0"
+        },
+        "location": {
+          ".validate": "newData.isString() && newData.val().length > 0"
+        },
+        "isOnline": {
+          ".validate": "newData.isBoolean()"
+        },
+        "batteryLevel": {
+          ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 100"
+        },
+        "lastHeartbeat": {
+          ".validate": "newData.isNumber() && newData.val() <= now"
+        }
+      }
+    }
+  }
+}

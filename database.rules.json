@@ -1,0 +1,21 @@
+{
+  "rules": {
+    ".read": true,
+    ".write": false,
+    
+    "robots": {
+      ".read": true,
+      ".write": "auth != null && auth.token.admin === true"
+    },
+    
+    "alerts": {
+      ".read": true,
+      ".write": "auth != null && (auth.token.admin === true || auth.token.robot === true)"
+    },
+    
+    "system": {
+      ".read": "auth != null",
+      ".write": "auth != null && auth.token.admin === true"
+    }
+  }
+}
