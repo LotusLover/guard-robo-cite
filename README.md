@@ -2,6 +2,8 @@
 
 警備ロボットから送信される情報をリアルタイムで監視するWebアプリケーションです。
 
+📖 **[⚡ クイックスタート（5分でデプロイ）](QUICKSTART.md)**
+
 ## 📋 概要
 
 - 警備ロボットの状態監視（オンライン状況、バッテリーレベル、最終通信時間）
@@ -19,6 +21,8 @@
 
 ## 🚀 開発環境のセットアップ
 
+⚠️ **重要**: 初回セットアップ時は必ず以下の手順を実行してください。
+
 1. **リポジトリのクローン**
    ```bash
    git clone https://github.com/LotusLover/guard-robo-cite.git
@@ -30,18 +34,26 @@
    npm install
    ```
    
-   ⚠️ **重要**: Firebase SDKを含む全ての依存関係がインストールされます。
+   ⚠️ **重要**: このコマンドにより `package-lock.json` が生成されます。
+   このファイルは必ずGitにコミットしてください。
 
-3. **Firebase設定**
+3. **package-lock.json をコミット（初回のみ）**
+   ```bash
+   git add package-lock.json
+   git commit -m "Add package-lock.json"
+   git push origin main
+   ```
+
+4. **Firebase設定**
    - `src/firebase.ts` でFirebaseプロジェクトの設定を更新
-   - 実際のFirebase設定情報を入力（現在はダミー設定）
+   - 実際のFirebase設定情報を入力（既に設定済み）
 
-4. **開発サーバーの起動**
+5. **開発サーバーの起動**
    ```bash
    npm run dev
    ```
 
-5. **ビルド**
+6. **ビルド**
    ```bash
    npm run build
    ```

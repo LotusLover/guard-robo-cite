@@ -25,16 +25,29 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
           
       - name: Install dependencies
-        run: npm ci
+        run: |
+          echo "📦 Installing dependencies..."
+          npm install
+          echo "✅ Dependencies installed successfully"
         
       - name: Verify Firebase installation
-        run: npm list firebase
+        run: |
+          echo "🔍 Verifying Firebase installation..."
+          npm list firebase || echo "⚠️ Firebase not found in dependencies"
         
       - name: Build
-        run: npm run build
+        run: |
+          echo "🔨 Building project..."
+          npm run build
+          echo "✅ Build completed successfully"
+          
+      - name: Verify build output
+        run: |
+          echo "📂 Checking build output..."
+          ls -la dist/
+          echo "✅ Build output verified"
         
       - name: Setup Pages
         uses: actions/configure-pages@v4

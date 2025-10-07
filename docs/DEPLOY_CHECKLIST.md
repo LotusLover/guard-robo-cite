@@ -7,6 +7,7 @@
 ### 1. ✅ 依存関係の確認
 - [x] `package.json` に Firebase SDK が含まれている (`firebase: ^11.0.2`)
 - [x] `package.json` に gh-pages が含まれている (`gh-pages: ^6.2.0`)
+- [ ] **`package-lock.json` がリポジトリにコミットされている（重要！）**
 - [x] TypeScript の型定義エラーが解決されている
 - [x] ビルドスクリプトが正しく設定されている
 
@@ -42,8 +43,16 @@
 ### ステップ1: ローカルでの最終確認
 
 ```bash
-# 依存関係のインストール
+# 依存関係のインストール（package-lock.json を生成）
 npm install
+
+# package-lock.json が生成されたことを確認
+ls -la package-lock.json
+
+# package-lock.json をコミット（初回のみ）
+git add package-lock.json
+git commit -m "Add package-lock.json for reproducible builds"
+git push origin main
 
 # ビルドテスト
 npm run build
@@ -51,6 +60,9 @@ npm run build
 # プレビュー
 npm run preview
 ```
+
+⚠️ **重要**: `package-lock.json` がないとGitHub Actionsでのビルドが失敗します！
+詳細は [PACKAGE_LOCK.md](PACKAGE_LOCK.md) を参照してください。
 
 ### ステップ2: Firebase セキュリティルール設定
 
