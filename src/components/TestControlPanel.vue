@@ -300,10 +300,10 @@ const sendRandomAlert = async () => {
   ]
   
   newAlert.value = {
-    type: types[Math.floor(Math.random() * types.length)],
-    severity: severities[Math.floor(Math.random() * severities.length)],
-    location: locations[Math.floor(Math.random() * locations.length)],
-    description: descriptions[Math.floor(Math.random() * descriptions.length)],
+    type: types[Math.floor(Math.random() * types.length)] as GuardRobotAlert['type'],
+    severity: severities[Math.floor(Math.random() * severities.length)] as GuardRobotAlert['severity'],
+    location: locations[Math.floor(Math.random() * locations.length)] as string,
+    description: descriptions[Math.floor(Math.random() * descriptions.length)] as string,
     status: 'active'
   }
   
@@ -347,9 +347,9 @@ const updateAllRobotsBattery = async () => {
     
     for (let i = 0; i < robotIds.length; i++) {
       const robot: GuardRobotStatus = {
-        id: robotIds[i],
-        name: robotNames[i],
-        location: locations[i],
+        id: robotIds[i] as string,
+        name: robotNames[i] as string,
+        location: locations[i] as string,
         isOnline: true,
         batteryLevel: 100,
         lastHeartbeat: Date.now()
