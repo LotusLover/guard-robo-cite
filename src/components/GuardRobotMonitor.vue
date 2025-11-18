@@ -177,7 +177,7 @@ watch(() => alerts.value.length, (newCount, oldCount) => {
     // 新しいアラートが追加された
     const newAlert = alerts.value[0] // 最新のアラート
     if (newAlert && !isSoundMuted.value) {
-      console.log(`🔔 新しいアラート検知: ${newAlert.description}`)
+      console.log(`🔔 新しいアラート検知: ${newAlert.description} (severity: ${newAlert.severity})`)
       soundManager.playAlertSound(newAlert.severity)
     }
   }

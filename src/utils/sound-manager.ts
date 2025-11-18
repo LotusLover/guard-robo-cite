@@ -182,6 +182,7 @@ export class SoundManager {
    * 通常アラート音（低）
    */
   async playLowAlert() {
+    console.log('🔊 playLowAlert呼び出し')
     await this.playByBaseName('alert-low', 0.6)
   }
 
@@ -189,6 +190,7 @@ export class SoundManager {
    * 通常アラート音（中）
    */
   async playMediumAlert() {
+    console.log('🔊 playMediumAlert呼び出し')
     await this.playByBaseName('alert-medium', 0.7)
   }
 
@@ -196,6 +198,7 @@ export class SoundManager {
    * 警告アラート音（高）
    */
   async playHighAlert() {
+    console.log('🔊 playHighAlert呼び出し')
     await this.playByBaseName('alert-high', 0.8)
   }
 
@@ -203,6 +206,7 @@ export class SoundManager {
    * 緊急アラート音（緊急）
    */
   async playCriticalAlert() {
+    console.log('🔊 playCriticalAlert呼び出し')
     await this.playByBaseName('alert-critical', 0.9)
   }
 
@@ -238,6 +242,7 @@ export class SoundManager {
    * アラート重要度に応じて適切な音を再生
    */
   playAlertSound(severity: 'low' | 'medium' | 'high' | 'critical') {
+    console.log(`🔔 playAlertSound呼び出し - severity: ${severity}`)
     switch (severity) {
       case 'low':
         this.playLowAlert()
@@ -251,6 +256,8 @@ export class SoundManager {
       case 'critical':
         this.playCriticalAlert()
         break
+      default:
+        console.warn(`⚠️ 未知のseverity: ${severity}`)
     }
   }
 

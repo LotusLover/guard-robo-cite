@@ -162,6 +162,41 @@
         </div>
       </section>
 
+      <!-- 音声テスト -->
+      <section class="control-section">
+        <h3>🔊 音声テスト</h3>
+        
+        <div class="quick-actions">
+          <button 
+            class="quick-button sound-low"
+            @click="testLowSound"
+          >
+            🟢 低重要度
+          </button>
+          
+          <button 
+            class="quick-button sound-medium"
+            @click="testMediumSound"
+          >
+            🟡 中重要度
+          </button>
+          
+          <button 
+            class="quick-button sound-high"
+            @click="testHighSound"
+          >
+            🟠 高重要度
+          </button>
+          
+          <button 
+            class="quick-button sound-critical"
+            @click="testCriticalSound"
+          >
+            🔴 緊急重要度
+          </button>
+        </div>
+      </section>
+
       <!-- ステータス表示 -->
       <section class="control-section status-section">
         <h3>📊 送信ステータス</h3>
@@ -318,6 +353,31 @@ const sendRandomAlert = async () => {
   }
   
   await sendDummyAlert()
+}
+
+// 音声テストハンドラー
+const testLowSound = () => {
+  console.log('🔊 Low音声テスト開始')
+  soundManager.playLowAlert()
+  addLog('🟢 低重要度アラート音をテスト再生', 'info')
+}
+
+const testMediumSound = () => {
+  console.log('🔊 Medium音声テスト開始')
+  soundManager.playMediumAlert()
+  addLog('🟡 中重要度アラート音をテスト再生', 'info')
+}
+
+const testHighSound = () => {
+  console.log('🔊 High音声テスト開始')
+  soundManager.playHighAlert()
+  addLog('🟠 高重要度アラート音をテスト再生', 'info')
+}
+
+const testCriticalSound = () => {
+  console.log('🔊 Critical音声テスト開始')
+  soundManager.playCriticalAlert()
+  addLog('🔴 緊急重要度アラート音をテスト再生', 'info')
 }
 
 // 緊急アラート
@@ -588,6 +648,43 @@ input:checked + .slider:before {
 .quick-button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+/* 音声テストボタンのカラー */
+.sound-low {
+  background: rgba(76, 175, 80, 0.2);
+  border-color: #4caf50;
+}
+
+.sound-low:hover {
+  background: rgba(76, 175, 80, 0.3);
+}
+
+.sound-medium {
+  background: rgba(255, 193, 7, 0.2);
+  border-color: #ffc107;
+}
+
+.sound-medium:hover {
+  background: rgba(255, 193, 7, 0.3);
+}
+
+.sound-high {
+  background: rgba(255, 152, 0, 0.2);
+  border-color: #ff9800;
+}
+
+.sound-high:hover {
+  background: rgba(255, 152, 0, 0.3);
+}
+
+.sound-critical {
+  background: rgba(244, 67, 54, 0.2);
+  border-color: #f44336;
+}
+
+.sound-critical:hover {
+  background: rgba(244, 67, 54, 0.3);
 }
 
 .status-log {
