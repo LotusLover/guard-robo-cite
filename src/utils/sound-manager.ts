@@ -109,7 +109,9 @@ export class SoundManager {
    * ベース名から拡張子違いを順に試して再生（.mp3 → .wav）
    */
   private async playByBaseName(base: string, volume: number = 0.5) {
-    const candidates = [`/sounds/${base}.mp3`, `/sounds/${base}.wav`]
+    const baseUrl = (import.meta as any).env?.BASE_URL || '/'
+    const prefix = baseUrl.endsWith('/') ? baseUrl : baseUrl + '/'
+    const candidates = [`${prefix}sounds/${base}.mp3`, `${prefix}sounds/${base}.wav`]
     for (const url of candidates) {
       const ok = await this.playSoundFile(url, volume)
       if (ok) return
