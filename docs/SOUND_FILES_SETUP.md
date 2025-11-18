@@ -62,12 +62,7 @@ cp your-sounds/*.wav public/sounds/
 
 **MP3ファイルの場合:**
 
-MP3ファイルを使用する場合は、`src/utils/sound-manager.ts` のファイル拡張子を変更してください:
-
-```typescript
-// 例: WAV → MP3に変更
-await this.playSoundFile('/sounds/alert-low.mp3', 0.6)
-```
+現在の実装は同名の `.mp3` → `.wav` の順で自動判定して再生します。コード側の拡張子変更は不要です。
 
 ### 3. ファイル名の確認
 
