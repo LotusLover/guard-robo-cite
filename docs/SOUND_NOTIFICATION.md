@@ -3,7 +3,29 @@
 ## 概要
 
 警備ロボット監視システムに**通知音機能**を追加しました！
-新しいアラートを受信したときや、操作を実行したときに、適切な音でお知らせします。
+新しいアラートを受信したときや、操作を実行したときに、**WAV/MP3形式の音声ファイル**でお知らせします。
+
+## ⚠️ 重要: 音声ファイルの準備
+
+この機能を使用するには、音声ファイルを配置する必要があります。
+
+📖 **[音声ファイル配置ガイド](SOUND_FILES_SETUP.md)** を参照して、音声ファイルを準備してください。
+
+### クイックスタート
+
+1. `public/sounds/` フォルダを作成（既に作成済み）
+2. 8つの音声ファイル（WAV/MP3）を配置:
+   - `alert-low.wav`
+   - `alert-medium.wav`
+   - `alert-high.wav`
+   - `alert-critical.wav`
+   - `success.wav`
+   - `error.wav`
+   - `info.wav`
+   - `system-start.wav`
+3. ビルドして確認
+
+詳細は **[音声ファイル配置ガイド](SOUND_FILES_SETUP.md)** を参照してください。
 
 ## 機能一覧
 
@@ -64,25 +86,20 @@
 
 ## 技術詳細
 
-### Web Audio API
+### Web Audio API + 音声ファイル再生
 
-ブラウザ標準の **Web Audio API** を使用して音を生成します。
+音声ファイル（WAV/MP3）をWeb Audio APIで読み込んで再生します。
 
 ```typescript
-// 音声生成の例
-const audioContext = new AudioContext()
-const oscillator = audioContext.createOscillator()
-const gainNode = audioContext.createGain()
+// 音声ファイルの読み込みと再生
+const response = await fetch('/sounds/alert-low.wav')
+const arrayBuffer = await response.arrayBuffer()
+const audioBuffer = await audioContext.decodeAudioData(arrayBuffer)
 
-oscillator.frequency.value = 800 // 周波数（Hz）
-oscillator.type = 'sine' // 波形タイプ
-gainNode.gain.value = 0.3 // 音量（0.0〜1.0）
-
-oscillator.connect(gainNode)
-gainNode.connect(audioContext.destination)
-
-oscillator.start()
-oscillator.stop(audioContext.currentTime + 0.2) // 0.2秒間再生
+const source = audioContext.createBufferSource()
+source.buffer = audioBuffer
+source.connect(audioContext.destination)
+source.start(0)
 ```
 
 ### サウンドマネージャー
@@ -93,16 +110,27 @@ oscillator.stop(audioContext.currentTime + 0.2) // 0.2秒間再生
 import { soundManager } from '../utils/sound-manager'
 
 // アラート音を再生
-soundManager.playAlertSound('critical') // 緊急アラート
+await soundManager.playAlertSound('critical') // 緊急アラート
 
 // 成功音を再生
-soundManager.playSuccess()
+await soundManager.playSuccess()
 
 // エラー音を再生
-soundManager.playError()
+await soundManager.playError()
 
 // ミュート切り替え
 soundManager.toggleMute()
+```
+
+### キャッシュ機能
+
+一度読み込んだ音声ファイルはメモリにキャッシュされ、2回目以降は即座に再生できます。
+
+```typescript
+private soundCache: Map<string, AudioBuffer> = new Map()
+
+// 初回: ファイルを読み込んでキャッシュ
+// 2回目以降: キャッシュから即座に取得
 ```
 
 ### 主要メソッド

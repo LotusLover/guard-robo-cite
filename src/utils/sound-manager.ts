@@ -6,6 +6,7 @@
 export class SoundManager {
   private audioContext: AudioContext | null = null
   private isMuted = false
+  private soundCache: Map<string, AudioBuffer> = new Map()
 
   constructor() {
     // ユーザー操作後にAudioContextを初期化
@@ -20,6 +21,93 @@ export class SoundManager {
   private initAudioContext() {
     if (!this.audioContext) {
       this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)()
+    }
+  }
+
+  /**
+   * 音声ファイルを読み込む
+   */
+  private async loadSound(url: string): Promise<AudioBuffer | null> {
+    // キャッシュチェック
+    if (this.soundCache.has(url)) {
+      return this.soundCache.get(url)!
+    }
+
+    this.initAudioContext()
+    
+    if (!this.audioContext) {
+      console.warn('AudioContext が利用できません')
+      return null
+    }
+
+    try {
+      const response = await fetch(url)
+      const arrayBuffer = await response.arrayBuffer()
+      const audioBuffer = await this.audioContext.decodeAudioData(arrayBuffer)
+      
+      // キャッシュに保存
+      this.soundCache.set(url, audioBuffer)
+      
+      console.log(`✅ 音声ファイル読み込み成功: ${url}`)
+      return audioBuffer
+    } catch (error) {
+      console.error(`❌ 音声ファイル読み込みエラー (${url}):`, error)
+      return null
+    }
+  }
+
+  /**
+   * 音声ファイルを再生
+   */
+  private async playSoundFile(url: string, volume: number = 0.5): Promise<void> {
+    if (this.isMuted) return
+
+    this.initAudioContext()
+    
+    if (!this.audioContext) {
+      console.warn('AudioContext が利用できません')
+      return
+    }
+
+    try {
+      const audioBuffer = await this.loadSound(url)
+      
+      if (!audioBuffer) {
+        console.warn(`音声ファイルの読み込みに失敗: ${url}`)
+        return
+      }
+
+      const source = this.audioContext.createBufferSource()
+      const gainNode = this.audioContext.createGain()
+
+      source.buffer = audioBuffer
+      source.connect(gainNode)
+      gainNode.connect(this.audioContext.destination)
+
+      gainNode.gain.value = volume
+
+      source.start(0)
+      console.log(`🔊 音声再生: ${url}`)
+    } catch (error) {
+      console.error('音声再生エラー:', error)
+    }
+  }
+
+  /**
+   * HTML5 Audioで音声ファイルを再生（フォールバック）
+   */
+  private playAudioElement(url: string, volume: number = 0.5): void {
+    if (this.isMuted) return
+
+    try {
+      const audio = new Audio(url)
+      audio.volume = volume
+      audio.play().catch(error => {
+        console.error('Audio要素での再生エラー:', error)
+      })
+      console.log(`🔊 Audio要素で再生: ${url}`)
+    } catch (error) {
+      console.error('Audio要素作成エラー:', error)
     }
   }
 
@@ -59,84 +147,57 @@ export class SoundManager {
   /**
    * 通常アラート音（低）
    */
-  playLowAlert() {
-    this.playBeep(500, 0.3, 0.35)
-    setTimeout(() => this.playBeep(500, 0.2, 0.25), 400)
+  async playLowAlert() {
+    await this.playSoundFile('/sounds/alert-low.wav', 0.6)
   }
 
   /**
    * 通常アラート音（中）
    */
-  playMediumAlert() {
-    this.playBeep(700, 0.25, 0.4)
-    setTimeout(() => this.playBeep(700, 0.25, 0.4), 300)
-    setTimeout(() => this.playBeep(850, 0.3, 0.35), 650)
+  async playMediumAlert() {
+    await this.playSoundFile('/sounds/alert-medium.wav', 0.7)
   }
 
   /**
    * 警告アラート音（高）
    */
-  playHighAlert() {
-    // 上昇パターンで緊迫感（sawtooth波でより目立つ）
-    this.playBeep(800, 0.2, 0.4, 'sawtooth')
-    setTimeout(() => this.playBeep(900, 0.2, 0.4, 'sawtooth'), 250)
-    setTimeout(() => this.playBeep(1000, 0.2, 0.4, 'sawtooth'), 500)
-    setTimeout(() => this.playBeep(1100, 0.3, 0.45, 'sawtooth'), 750)
+  async playHighAlert() {
+    await this.playSoundFile('/sounds/alert-high.wav', 0.8)
   }
 
   /**
    * 緊急アラート音（緊急）
    */
-  playCriticalAlert() {
-    // 強力なサイレン風の音（より長く、より目立つ）
-    // square波でより鋭く目立つ音に
-    this.playBeep(1200, 0.35, 0.5, 'square')
-    setTimeout(() => this.playBeep(800, 0.35, 0.5, 'square'), 400)
-    setTimeout(() => this.playBeep(1200, 0.35, 0.5, 'square'), 800)
-    setTimeout(() => this.playBeep(800, 0.35, 0.5, 'square'), 1200)
-    setTimeout(() => this.playBeep(1200, 0.4, 0.55, 'square'), 1600)
-    setTimeout(() => this.playBeep(800, 0.4, 0.55, 'square'), 2050)
+  async playCriticalAlert() {
+    await this.playSoundFile('/sounds/alert-critical.wav', 0.9)
   }
 
   /**
    * 成功音
    */
-  playSuccess() {
-    // より華やかな成功音
-    this.playBeep(523.25, 0.12, 0.35) // C5
-    setTimeout(() => this.playBeep(659.25, 0.12, 0.35), 120) // E5
-    setTimeout(() => this.playBeep(783.99, 0.15, 0.4), 240) // G5
-    setTimeout(() => this.playBeep(1046.50, 0.25, 0.4), 400) // C6（高いド）
+  async playSuccess() {
+    await this.playSoundFile('/sounds/success.wav', 0.6)
   }
 
   /**
    * エラー音
    */
-  playError() {
-    // より目立つエラー音
-    this.playBeep(350, 0.25, 0.4)
-    setTimeout(() => this.playBeep(300, 0.25, 0.4), 280)
-    setTimeout(() => this.playBeep(250, 0.35, 0.45), 560)
+  async playError() {
+    await this.playSoundFile('/sounds/error.wav', 0.7)
   }
 
   /**
    * 情報音（軽い通知）
    */
-  playInfo() {
-    this.playBeep(900, 0.15, 0.25)
-    setTimeout(() => this.playBeep(1000, 0.12, 0.2), 180)
+  async playInfo() {
+    await this.playSoundFile('/sounds/info.wav', 0.5)
   }
 
   /**
    * システム起動音
    */
-  playSystemStart() {
-    // より壮大な起動音
-    this.playBeep(440, 0.15, 0.3) // A4
-    setTimeout(() => this.playBeep(554.37, 0.15, 0.3), 150) // C#5
-    setTimeout(() => this.playBeep(659.25, 0.15, 0.35), 300) // E5
-    setTimeout(() => this.playBeep(880, 0.2, 0.4), 450) // A5
-    setTimeout(() => this.playBeep(1046.50, 0.3, 0.45), 650) // C6（フィニッシュ）
+  async playSystemStart() {
+    await this.playSoundFile('/sounds/system-start.wav', 0.7)
   }
 
   /**
