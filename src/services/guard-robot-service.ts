@@ -234,8 +234,8 @@ export class GuardRobotService {
     }
 
     try {
-      const alertRef = dbRef(database, `alerts/${alertId}`)
-      await set(alertRef, { status }, { merge: true })
+      const alertRef = dbRef(database, `alerts/${alertId}/status`)
+      await set(alertRef, status)
       console.log(`✅ アラート状態を更新しました (ID: ${alertId}, Status: ${status})`)
     } catch (error) {
       console.error('❌ アラート状態更新エラー:', error)
@@ -255,10 +255,6 @@ export class GuardRobotService {
    */
   async acknowledgeAlert(alertId: string): Promise<void> {
     return this.updateAlertStatus(alertId, 'acknowledged')
-    } catch (error) {
-      console.error('❌ アラート追加エラー:', error)
-      throw error
-    }
   }
 
   /**

@@ -218,10 +218,24 @@ export class SoundManager {
   }
 
   /**
+   * 操作成功音（フィードバック用）
+   */
+  async playOperationSuccess() {
+    await this.playSuccess()
+  }
+
+  /**
    * エラー音
    */
   async playError() {
     await this.playByBaseName('error', 0.7)
+  }
+
+  /**
+   * 操作エラー音（フィードバック用）
+   */
+  async playOperationError() {
+    await this.playError()
   }
 
   /**
