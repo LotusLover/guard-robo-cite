@@ -225,6 +225,43 @@ export class GuardRobotService {
   }
 
   /**
+   * アラートの状態を更新（確認済み・解決済みに変更）
+   */
+  async updateAlertStatus(alertId: string, status: 'active' | 'acknowledged' | 'resolved'): Promise<void> {
+    if (!this.isOnline) {
+      console.warn('⚠️ オフライン状態のため、アラート更新をスキップします')
+      return
+    }
+
+    try {
+      const alertRef = dbRef(database, `alerts/${alertId}`)
+      await set(alertRef, { status }, { merge: true })
+      console.log(`✅ アラート状態を更新しました (ID: ${alertId}, Status: ${status})`)
+    } catch (error) {
+      console.error('❌ アラート状態更新エラー:', error)
+      throw error
+    }
+  }
+
+  /**
+   * アラートを解決済みにする
+   */
+  async resolveAlert(alertId: string): Promise<void> {
+    return this.updateAlertStatus(alertId, 'resolved')
+  }
+
+  /**
+   * アラートを確認済みにする
+   */
+  async acknowledgeAlert(alertId: string): Promise<void> {
+    return this.updateAlertStatus(alertId, 'acknowledged')
+    } catch (error) {
+      console.error('❌ アラート追加エラー:', error)
+      throw error
+    }
+  }
+
+  /**
    * ロボット状態を更新
    */
   async updateRobotStatus(robot: GuardRobotStatus): Promise<void> {

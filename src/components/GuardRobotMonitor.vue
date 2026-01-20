@@ -84,8 +84,27 @@
               <div class="alert-description">{{ alert.description }}</div>
             </div>
             <div class="alert-footer">
-              <span class="alert-severity">{{ getSeverityText(alert.severity) }}</span>
-              <span class="alert-status">{{ getStatusText(alert.status) }}</span>
+              <div class="alert-info">
+                <span class="alert-severity">{{ getSeverityText(alert.severity) }}</span>
+                <span class="alert-status">{{ getStatusText(alert.status) }}</span>
+              </div>
+              <div class="alert-actions">
+                <button 
+                  v-if="alert.status === 'active'"
+                  class="action-btn acknowledge-btn"
+                  @click="acknowledgeAlert(alert.id)"
+                  title="確認済みにする"
+                >
+                  ✓ 確認
+                </button>
+                <button 
+                  class="action-btn resolve-btn"
+                  @click="resolveAlert(alert.id)"
+                  :title="alert.status === 'active' ? '解決済みにする' : 'アーカイブに移動'"
+                >
+                  {{ alert.status === 'active' ? '✔ 解決' : '📁 アーカイブ' }}
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -218,6 +237,30 @@ const getStatusText = (status: string): string => {
 // 音声ミュート切り替え
 const toggleSound = () => {
   isSoundMuted.value = soundManager.toggleMute()
+}
+
+// アラート状態を更新（確認済みに）
+const acknowledgeAlert = async (alertId: string) => {
+  try {
+    await guardRobotService.acknowledgeAlert(alertId)
+    console.log(`✅ アラートを確認済みにしました: ${alertId}`)
+    soundManager.playOperationSuccess()
+  } catch (error) {
+    console.error('❌ アラート確認処理エラー:', error)
+    soundManager.playOperationError()
+  }
+}
+
+// アラート状態を更新（解決済み/アーカイブに）
+const resolveAlert = async (alertId: string) => {
+  try {
+    await guardRobotService.resolveAlert(alertId)
+    console.log(`✅ アラートを解決済みにしました: ${alertId}`)
+    soundManager.playOperationSuccess()
+  } catch (error) {
+    console.error('❌ アラート解決処理エラー:', error)
+    soundManager.playOperationError()
+  }
 }
 
 // アラート数の変化を監視して通知音を再生
@@ -590,6 +633,14 @@ onUnmounted(() => {
   justify-content: space-between;
   align-items: center;
   font-size: 0.85rem;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.alert-info {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
 }
 
 .alert-severity {
@@ -603,6 +654,56 @@ onUnmounted(() => {
   padding: 0.25rem 0.75rem;
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.2);
+}
+
+/* アクションボタンのスタイル */
+.alert-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.action-btn {
+  padding: 0.4rem 0.8rem;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.acknowledge-btn {
+  background: rgba(76, 175, 80, 0.3);
+  color: #81c784;
+}
+
+.acknowledge-btn:hover {
+  background: rgba(76, 175, 80, 0.5);
+  color: #fff;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+}
+
+.acknowledge-btn:active {
+  transform: translateY(0);
+}
+
+.resolve-btn {
+  background: rgba(244, 67, 54, 0.3);
+  color: #ef5350;
+}
+
+.resolve-btn:hover {
+  background: rgba(244, 67, 54, 0.5);
+  color: #fff;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(244, 67, 54, 0.3);
+}
+
+.resolve-btn:active {
+  transform: translateY(0);
 }
 
 /* レスポンシブデザイン */
@@ -643,6 +744,18 @@ onUnmounted(() => {
     align-items: flex-start;
     gap: 0.5rem;
   }
+  
+  .alert-info {
+    width: 100%;
+  }
+  
+  .alert-actions {
+    width: 100%;
+  }
+  
+  .action-btn {
+    flex: 1;
+  }
 }
 
 @media (max-width: 480px) {
@@ -655,6 +768,11 @@ onUnmounted(() => {
   .detail-item {
     flex-direction: column;
     gap: 0.25rem;
+  }
+  
+  .action-btn {
+    padding: 0.5rem;
+    font-size: 0.75rem;
   }
 }
 </style>
