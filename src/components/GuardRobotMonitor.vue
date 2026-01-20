@@ -60,14 +60,48 @@
         </div>
       </section>
 
-      <!-- アラート一覧 -->
-      <section class="alerts-section">
-        <h2>⚠️ アラート履歴</h2>
-        <div class="alerts-list">
+      <!-- アクティブアラート -->
+      <section class="alerts-section active-alerts-section">
+        <h2>🔴 有効なアラート</h2>
+        <div v-if="activeAlertsList.length === 0" class="empty-state">
+          <p>アクティブなアラートはありません</p>
+        </div>
+        <div v-else class="alerts-list">
           <div 
-            v-for="alert in sortedAlerts" 
+            v-for="alert in activeAlertsList" 
             :key="alert.id"
-            class="alert-card"
+            class="alert-card active-alert"
+            :class="[`severity-${alert.severity}`, `status-${alert.status}`]"
+          >
+            <div class="alert-header">
+              <div class="alert-type">
+                {{ getAlertIcon(alert.type) }} {{ getAlertTypeText(alert.type) }}
+              </div>
+              <div class="alert-time">{{ formatTime(alert.timestamp) }}</div>
+            </div>
+            <div class="alert-body">
+              <div class="alert-location">📍 {{ alert.location }}</div>
+              <div class="alert-description">{{ alert.description }}</div>
+            </div>
+            <div class="alert-footer">
+              <span class="alert-severity">{{ getSeverityText(alert.severity) }}</span>
+              <span class="alert-status">{{ getStatusText(alert.status) }}</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- アラート履歴 -->
+      <section class="alerts-section history-alerts-section">
+        <h2>📋 アラート履歴</h2>
+        <div v-if="historyAlertsList.length === 0" class="empty-state">
+          <p>解決済みのアラートはありません</p>
+        </div>
+        <div v-else class="alerts-list">
+          <div 
+            v-for="alert in historyAlertsList" 
+            :key="alert.id"
+            class="alert-card history-alert"
             :class="[`severity-${alert.severity}`, `status-${alert.status}`]"
           >
             <div class="alert-header">
@@ -107,9 +141,24 @@ const previousAlertCount = ref(0)
 // 計算プロパティ
 const totalRobots = computed(() => robots.value.length)
 const onlineRobots = computed(() => robots.value.filter(r => r.isOnline).length)
-const activeAlerts = computed(() => alerts.value.filter(a => a.status === 'active').length)
-const sortedAlerts = computed(() => 
-  [...alerts.value].sort((a, b) => b.timestamp - a.timestamp)
+const activeAlerts = computed(() => alerts.value.filter(a => a.status === 'active' || a.status === 'acknowledged').length)
+const activeAlertsList = computed(() => 
+  [...alerts.value]
+    .filter(a => a.status === 'active' || a.status === 'acknowledged')
+    .sort((a, b) => {
+      // 緊急度順でソート（critical -> high -> medium -> low）
+      const severityOrder = { critical: 0, high: 1, medium: 2, low: 3 }
+      const severityDiff = (severityOrder[a.severity as keyof typeof severityOrder] || 999) - 
+                          (severityOrder[b.severity as keyof typeof severityOrder] || 999)
+      if (severityDiff !== 0) return severityDiff
+      // 同じ緊急度の場合は新しい順
+      return b.timestamp - a.timestamp
+    })
+)
+const historyAlertsList = computed(() => 
+  [...alerts.value]
+    .filter(a => a.status === 'resolved')
+    .sort((a, b) => b.timestamp - a.timestamp)
 )
 
 // サービスからのデータ更新を監視する変数
@@ -348,6 +397,40 @@ onUnmounted(() => {
   text-align: center;
 }
 
+/* アクティブアラートセクション */
+.active-alerts-section {
+  background: rgba(244, 67, 54, 0.08);
+  border: 2px solid rgba(244, 67, 54, 0.2);
+  border-radius: 12px;
+  padding: 1.5rem;
+  backdrop-filter: blur(10px);
+}
+
+.active-alerts-section h2 {
+  color: #ff6b6b;
+  text-shadow: 0 0 10px rgba(244, 67, 54, 0.3);
+}
+
+/* 履歴アラートセクション */
+.history-alerts-section {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 1.5rem;
+  backdrop-filter: blur(10px);
+}
+
+.history-alerts-section h2 {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.empty-state {
+  text-align: center;
+  padding: 2rem;
+  opacity: 0.6;
+  font-size: 1.1rem;
+}
+
 .robots-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -423,6 +506,32 @@ onUnmounted(() => {
   border-radius: 12px;
   padding: 1.5rem;
   backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+}
+
+/* アクティブアラートのスタイル */
+.alert-card.active-alert {
+  border-width: 2px;
+  box-shadow: 0 0 20px rgba(244, 67, 54, 0.2);
+  animation: pulse-alert 2s infinite;
+}
+
+@keyframes pulse-alert {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(244, 67, 54, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(244, 67, 54, 0.4);
+  }
+}
+
+/* 履歴アラートのスタイル */
+.alert-card.history-alert {
+  opacity: 0.7;
+}
+
+.alert-card.history-alert:hover {
+  opacity: 0.9;
 }
 
 .alert-card.severity-critical {
