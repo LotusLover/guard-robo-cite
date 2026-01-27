@@ -266,7 +266,7 @@ import { TIMING, BATTERY, HEARTBEAT, SKELETON, PAGINATION, TABS } from '../confi
 import MapView from './MapView.vue'
 
 // タブ管理
-const activeTab = ref<'active-alerts' | 'archive' | 'robots' | 'dashboard'>(TABS.DEFAULT_TAB)
+const activeTab = ref<'active-alerts' | 'archive' | 'robots' | 'dashboard'>('active-alerts')
 
 // リアクティブデータ
 const robots = ref<GuardRobotStatus[]>([])
