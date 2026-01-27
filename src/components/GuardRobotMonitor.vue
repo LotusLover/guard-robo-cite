@@ -29,7 +29,22 @@
       <!-- ロボット状態一覧 -->
       <section class="robots-section">
         <h2>🛡️ ロボット状態</h2>
-        <div class="robots-grid">
+        <!-- ローディング中のスケルトン -->
+        <div v-if="isLoading" class="robots-grid">
+          <div v-for="i in SKELETON.ROBOT_CARDS_COUNT" :key="`skeleton-robot-${i}`" class="robot-card skeleton">
+            <div class="skeleton-header">
+              <div class="skeleton-text skeleton-title"></div>
+              <div class="skeleton-badge"></div>
+            </div>
+            <div class="skeleton-details">
+              <div class="skeleton-text"></div>
+              <div class="skeleton-text"></div>
+              <div class="skeleton-text"></div>
+            </div>
+          </div>
+        </div>
+        <!-- データ読み込み後 -->
+        <div v-else class="robots-grid">
           <div 
             v-for="robot in robots" 
             :key="robot.id"
@@ -149,6 +164,8 @@ import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import type { GuardRobotAlert, GuardRobotStatus } from '../types/guard-robot'
 import { guardRobotService } from '../services/guard-robot-service'
 import { soundManager } from '../utils/sound-manager'
+import { hasSignificantChange } from '../utils/diff-detector'
+import { TIMING, BATTERY, HEARTBEAT, SKELETON } from '../config/constants'
 
 // リアクティブデータ
 const robots = ref<GuardRobotStatus[]>([])
@@ -156,6 +173,10 @@ const alerts = ref<GuardRobotAlert[]>([])
 const networkStatus = ref({ isOnline: true, lastUpdated: Date.now() })
 const isSoundMuted = ref(false)
 const previousAlertCount = ref(0)
+const isLoading = ref(true)
+const isInitialLoad = ref(true)
+const previousRobotStates = ref<Map<string, GuardRobotStatus>>(new Map())
+const previousAlertIds = ref<Set<string>>(new Set())
 
 // 計算プロパティ
 const totalRobots = computed(() => robots.value.length)
@@ -263,61 +284,127 @@ const resolveAlert = async (alertId: string) => {
   }
 }
 
-// アラート数の変化を監視して通知音を再生
-watch(() => alerts.value.length, (newCount, oldCount) => {
-  if (newCount > oldCount && previousAlertCount.value > 0) {
-    // 新しいアラートが追加された
-    const newAlert = alerts.value[0] // 最新のアラート
-    if (newAlert && !isSoundMuted.value) {
-      console.log(`🔔 新しいアラート検知: ${newAlert.description} (severity: ${newAlert.severity})`)
-      soundManager.playAlertSound(newAlert.severity)
+// アラートの変化を監視して通知音を再生（改善版：IDベース）
+watch(() => alerts.value, (newAlerts) => {
+  const newIds = new Set(newAlerts.map(a => a.id))
+  
+  // 新規追加されたアラートを検出
+  newAlerts.forEach(alert => {
+    if (!previousAlertIds.value.has(alert.id) && alert.status === 'active') {
+      console.log(`🔔 新しいアラート検知: ${alert.description}`)
+      if (!isSoundMuted.value) {
+        soundManager.playAlertSound(alert.severity)
+      }
     }
-  }
-  previousAlertCount.value = newCount
-})
+  })
+  
+  previousAlertIds.value = newIds
+}, { deep: true })
 
 // ライフサイクル
-onMounted(() => {
+onMounted(async () => {
   console.log('🚀 GuardRobotMonitor コンポーネントを初期化中...')
+  isLoading.value = true
   
-  // システム起動音を再生
-  setTimeout(() => {
-    if (!isSoundMuted.value) {
-      soundManager.playSystemStart()
-    }
-  }, 500)
-  
-  // サービスからのリアルタイム更新を監視
-  unsubscribeAlerts = guardRobotService.onAlertsChange((newAlerts) => {
-    alerts.value = newAlerts
-    console.log(`📡 アラート更新: ${newAlerts.length}件`)
-  })
-  
-  unsubscribeRobots = guardRobotService.onRobotsChange((newRobots) => {
-    robots.value = newRobots
-    console.log(`🤖 ロボット更新: ${newRobots.length}台`)
-  })
+  try {
+    // サービスからのリアルタイム更新を監視
+    unsubscribeAlerts = guardRobotService.onAlertsChange((newAlerts) => {
+      alerts.value = newAlerts
+      console.log(`📡 アラート更新: ${newAlerts.length}件`)
+      
+      // 初回データ取得完了
+      if (isInitialLoad.value && newAlerts.length > 0) {
+        isInitialLoad.value = false
+        isLoading.value = false
+      }
+    })
+    
+    unsubscribeRobots = guardRobotService.onRobotsChange((newRobots) => {
+      robots.value = newRobots
+      console.log(`🤖 ロボット更新: ${newRobots.length}台`)
+      
+      // 初回データ取得完了
+      if (isInitialLoad.value && newRobots.length > 0) {
+        isInitialLoad.value = false
+        isLoading.value = false
+      }
+    })
+    
+    // タイムアウト保護（データが取得できない場合）
+    setTimeout(() => {
+      if (isLoading.value) {
+        console.warn('⚠️ データ取得タイムアウト')
+        isLoading.value = false
+      }
+    }, TIMING.DATA_LOADING_TIMEOUT)
+    
+    // システム起動音を再生
+    setTimeout(() => {
+      if (!isSoundMuted.value) {
+        soundManager.playSystemStart()
+      }
+    }, TIMING.SYSTEM_START_SOUND_DELAY)
+    
+  } catch (error) {
+    console.error('❌ 初期化エラー:', error)
+    isLoading.value = false
+  }
 
   // ネットワーク状態の定期チェック
   const networkCheckInterval = setInterval(() => {
     networkStatus.value = guardRobotService.getNetworkStatus()
-  }, 5000)
+  }, TIMING.NETWORK_STATUS_CHECK_INTERVAL)
 
-  // 定期的にロボットの状態を更新（リアルタイム感を演出）
+  // 定期的にロボットの状態を更新（差分のみ）
   const updateInterval = setInterval(() => {
     robots.value.forEach(robot => {
       if (robot.isOnline && networkStatus.value.isOnline) {
-        const updatedRobot = {
-          ...robot,
-          batteryLevel: Math.max(20, robot.batteryLevel - Math.random() * 2),
-          lastHeartbeat: Date.now() - Math.random() * 60000
+        // 新しい値を計算
+        const newBatteryLevel = Math.max(
+          BATTERY.MIN_LEVEL,
+          robot.batteryLevel - Math.random() * BATTERY.MAX_DECREASE_RATE
+        )
+        const newHeartbeat = Date.now() - Math.random() * HEARTBEAT.RANDOM_RANGE
+        
+        // 前回の状態と比較
+        const previousState = previousRobotStates.value.get(robot.id)
+        
+        // 差分があるフィールドのみ更新
+        const fieldsToUpdate: Partial<Omit<GuardRobotStatus, 'id'>> = {}
+        
+        // バッテリーレベルの変化が閾値以上の場合のみ更新
+        if (!previousState || hasSignificantChange(
+          previousState.batteryLevel, 
+          newBatteryLevel, 
+          BATTERY.SIGNIFICANT_CHANGE_THRESHOLD
+        )) {
+          fieldsToUpdate.batteryLevel = newBatteryLevel
         }
-        guardRobotService.updateRobotStatus(updatedRobot).catch((error) => {
-          console.warn('⚠️ ロボット状態更新エラー:', error)
-        })
+        
+        // ハートビートは一定間隔で更新
+        if (!previousState || newHeartbeat - previousState.lastHeartbeat > HEARTBEAT.MIN_UPDATE_INTERVAL) {
+          fieldsToUpdate.lastHeartbeat = newHeartbeat
+        }
+        
+        // 更新対象がある場合のみFirebaseに書き込み
+        if (Object.keys(fieldsToUpdate).length > 0) {
+          guardRobotService.updateRobotFields(robot.id, fieldsToUpdate)
+            .then(() => {
+              // 成功したら前回状態を更新
+              previousRobotStates.value.set(robot.id, {
+                ...robot,
+                ...fieldsToUpdate
+              })
+            })
+            .catch((error) => {
+              console.warn(`⚠️ ロボット${robot.id}の状態更新エラー:`, error)
+            })
+        } else {
+          console.log(`⏭️ ロボット${robot.id}: 更新なし（差分なし）`)
+        }
       }
     })
-  }, 10000)
+  }, TIMING.ROBOT_STATUS_UPDATE_INTERVAL)
 
   // 接続テストボタンの追加（開発用）
   if (import.meta.env.DEV) {
@@ -487,6 +574,51 @@ onUnmounted(() => {
   padding: 1.5rem;
   backdrop-filter: blur(10px);
   transition: transform 0.2s ease;
+}
+
+/* スケルトンスクリーン */
+.robot-card.skeleton {
+  animation: skeleton-loading 1.5s infinite ease-in-out;
+}
+
+@keyframes skeleton-loading {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.7; }
+}
+
+.skeleton-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.skeleton-text {
+  height: 16px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  margin-bottom: 0.5rem;
+}
+
+.skeleton-title {
+  width: 60%;
+  height: 20px;
+}
+
+.skeleton-badge {
+  width: 80px;
+  height: 24px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+}
+
+.skeleton-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.skeleton-details .skeleton-text {
+  width: 100%;
 }
 
 .robot-card:hover {

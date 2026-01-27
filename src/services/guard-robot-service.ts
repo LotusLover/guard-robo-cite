@@ -1,6 +1,7 @@
-import { ref as dbRef, push, set, onValue, off, goOffline, goOnline, DataSnapshot } from 'firebase/database'
+import { ref as dbRef, push, set, update, onValue, off, goOffline, goOnline, DataSnapshot } from 'firebase/database'
 import { database, monitorNetworkStatus } from '../firebase'
 import type { GuardRobotAlert, GuardRobotStatus } from '../types/guard-robot'
+import { TIMING } from '../config/constants'
 
 export class GuardRobotService {
   private alertsRef = dbRef(database, 'alerts')
@@ -50,7 +51,7 @@ export class GuardRobotService {
         // 接続状態をテスト
         this.testFirebaseConnection()
       }
-    }, 2000)
+    }, TIMING.FIREBASE_RETRY_DELAY)
   }
 
   /**
@@ -272,6 +273,38 @@ export class GuardRobotService {
       console.log('✅ ロボット状態を更新しました:', robot.name)
     } catch (error) {
       console.error('❌ ロボット状態更新エラー:', error)
+      throw error
+    }
+  }
+
+  /**
+   * ロボットの特定フィールドのみ更新（差分更新）
+   * パフォーマンス最適化のため、変更があったフィールドのみをFirebaseに送信
+   */
+  async updateRobotFields(
+    robotId: string,
+    fields: Partial<Omit<GuardRobotStatus, 'id'>>
+  ): Promise<void> {
+    if (!this.isOnline) {
+      console.warn('⚠️ オフライン状態のため、ロボット更新をスキップします')
+      return
+    }
+
+    if (Object.keys(fields).length === 0) {
+      console.log('⏭️ 更新するフィールドがありません')
+      return
+    }
+
+    try {
+      const updates: Record<string, any> = {}
+      Object.entries(fields).forEach(([key, value]) => {
+        updates[`robots/${robotId}/${key}`] = value
+      })
+      
+      await update(dbRef(database), updates)
+      console.log(`✅ ロボットフィールド更新: ${robotId}`, Object.keys(fields))
+    } catch (error) {
+      console.error('❌ フィールド更新エラー:', error)
       throw error
     }
   }

@@ -2,13 +2,27 @@
 import { onMounted, onUnmounted } from 'vue'
 import GuardRobotMonitor from './components/GuardRobotMonitor.vue'
 import TestControlPanel from './components/TestControlPanel.vue'
+import SoundSettingsPanel from './components/SoundSettingsPanel.vue'
 import { guardRobotService } from './services/guard-robot-service'
+import { soundManager } from './utils/sound-manager'
 
 onMounted(async () => {
+  console.log('🚀 アプリケーションを起動中...')
+  
+  // 音声ファイルをプリロード
+  try {
+    await soundManager.preloadAllSounds()
+    console.log('✅ 音声プリロード完了')
+  } catch (error) {
+    console.warn('⚠️ 音声プリロードエラー:', error)
+  }
+  
   // ダミーデータを初期化
   await guardRobotService.initializeDummyData()
   // ダミーのリアルタイム更新を開始
   guardRobotService.startDummyUpdates()
+  
+  console.log('✅ アプリケーションの初期化が完了しました')
 })
 
 onUnmounted(() => {
@@ -19,6 +33,9 @@ onUnmounted(() => {
 
 <template>
   <div class="app-container">
+    <!-- 音声設定パネル（右上に固定） -->
+    <SoundSettingsPanel />
+    
     <header class="app-header">
       <h1>🛡️ 警備ロボット監視システム</h1>
       <p class="subtitle">Guard Robot Monitoring System</p>

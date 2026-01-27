@@ -3,12 +3,25 @@
  * アラート受信時の通知音を管理
  */
 
+import { VOLUME, BEEP } from '../config/constants'
+import { 
+  SOUND_FILES, 
+  type SoundSettings,
+  loadSoundSettings, 
+  saveSoundSettings,
+  type SoundFileName 
+} from '../config/sound-config'
+
 export class SoundManager {
   private audioContext: AudioContext | null = null
   private isMuted = false
   private soundCache: Map<string, AudioBuffer> = new Map()
+  private settings: SoundSettings
 
   constructor() {
+    // 設定を読み込み
+    this.settings = loadSoundSettings()
+    this.isMuted = this.settings.isMuted
     // ユーザー操作後にAudioContextを初期化
     if (typeof window !== 'undefined') {
       document.addEventListener('click', () => this.initAudioContext(), { once: true })
@@ -22,6 +35,44 @@ export class SoundManager {
     if (!this.audioContext) {
       this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)()
     }
+  }
+
+  /**
+   * マスター音量と個別音量を考慮した最終音量を計算
+   */
+  private calculateVolume(soundName: SoundFileName, baseVolume: number): number {
+    const individualVolume = this.settings.soundVolumes[soundName] ?? baseVolume
+    return individualVolume * this.settings.masterVolume
+  }
+
+  /**
+   * 全音声ファイルをプリロード
+   */
+  async preloadAllSounds(): Promise<void> {
+    console.log('🎵 音声ファイルのプリロードを開始...')
+    const baseUrl = (import.meta as any).env?.BASE_URL || '/'
+    const prefix = baseUrl.endsWith('/') ? baseUrl : baseUrl + '/'
+    
+    const promises = Object.entries(SOUND_FILES).map(async ([name, config]) => {
+      const urlMp3 = `${prefix}sounds/${config.path}`
+      const urlWav = urlMp3.replace('.mp3', '.wav')
+      
+      // mp3を試す
+      let loaded = await this.loadSound(urlMp3)
+      if (!loaded) {
+        // wavを試す
+        loaded = await this.loadSound(urlWav)
+      }
+      
+      if (loaded) {
+        console.log(`✅ プリロード完了: ${name}`)
+      } else {
+        console.warn(`⚠️ プリロード失敗: ${name}`)
+      }
+    })
+    
+    await Promise.allSettled(promises)
+    console.log('🎵 全音声ファイルのプリロードが完了しました')
   }
 
   /**
@@ -69,7 +120,7 @@ export class SoundManager {
   /**
    * 音声ファイルを再生
    */
-  private async playSoundFile(url: string, volume: number = 0.5): Promise<boolean> {
+  private async playSoundFile(url: string, volume: number = VOLUME.DEFAULT): Promise<boolean> {
     if (this.isMuted) return false
 
     this.initAudioContext()
@@ -108,7 +159,7 @@ export class SoundManager {
   /**
    * ベース名から拡張子違いを順に試して再生（.mp3 → .wav）
    */
-  private async playByBaseName(base: string, volume: number = 0.5) {
+  private async playByBaseName(base: string, volume: number = VOLUME.DEFAULT) {
     const baseUrl = (import.meta as any).env?.BASE_URL || '/'
     const prefix = baseUrl.endsWith('/') ? baseUrl : baseUrl + '/'
     const candidates = [`${prefix}sounds/${base}.mp3`, `${prefix}sounds/${base}.wav`]
@@ -124,13 +175,13 @@ export class SoundManager {
       }
     }
     // どちらも失敗した場合は簡易ビープでフォールバック
-    this.playBeep(800, 0.2, Math.min(0.5, volume), 'triangle')
+    this.playBeep(BEEP.FREQUENCY, BEEP.DURATION, Math.min(VOLUME.DEFAULT, volume), BEEP.WAVE_TYPE)
   }
 
   /**
    * HTML5 Audioで音声ファイルを再生（フォールバック）
    */
-  private playAudioElement(url: string, volume: number = 0.5): void {
+  private playAudioElement(url: string, volume: number = VOLUME.DEFAULT): void {
     if (this.isMuted) return
 
     try {
@@ -148,7 +199,7 @@ export class SoundManager {
   /**
    * ビープ音を生成して再生
    */
-  private playBeep(frequency: number, duration: number, volume: number = 0.3, type: OscillatorType = 'sine') {
+  private playBeep(frequency: number, duration: number, volume: number = VOLUME.BEEP_DEFAULT, type: OscillatorType = 'sine') {
     if (this.isMuted) return
 
     this.initAudioContext()
@@ -169,7 +220,7 @@ export class SoundManager {
       oscillator.type = type // 'sine', 'square', 'sawtooth', 'triangle'
 
       gainNode.gain.setValueAtTime(volume, this.audioContext.currentTime)
-      gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + duration)
+      gainNode.gain.exponentialRampToValueAtTime(VOLUME.FADE_OUT_MIN, this.audioContext.currentTime + duration)
 
       oscillator.start(this.audioContext.currentTime)
       oscillator.stop(this.audioContext.currentTime + duration)
@@ -183,7 +234,8 @@ export class SoundManager {
    */
   async playLowAlert() {
     console.log('🔊 playLowAlert呼び出し')
-    await this.playByBaseName('alert-low', 0.6)
+    const volume = this.calculateVolume('alert-low', VOLUME.ALERT_LOW)
+    await this.playByBaseName('alert-low', volume)
   }
 
   /**
@@ -191,7 +243,8 @@ export class SoundManager {
    */
   async playMediumAlert() {
     console.log('🔊 playMediumAlert呼び出し')
-    await this.playByBaseName('alert-medium', 0.7)
+    const volume = this.calculateVolume('alert-medium', VOLUME.ALERT_MEDIUM)
+    await this.playByBaseName('alert-medium', volume)
   }
 
   /**
@@ -199,7 +252,8 @@ export class SoundManager {
    */
   async playHighAlert() {
     console.log('🔊 playHighAlert呼び出し')
-    await this.playByBaseName('alert-high', 0.8)
+    const volume = this.calculateVolume('alert-high', VOLUME.ALERT_HIGH)
+    await this.playByBaseName('alert-high', volume)
   }
 
   /**
@@ -207,14 +261,16 @@ export class SoundManager {
    */
   async playCriticalAlert() {
     console.log('🔊 playCriticalAlert呼び出し')
-    await this.playByBaseName('alert-critical', 0.9)
+    const volume = this.calculateVolume('alert-critical', VOLUME.ALERT_CRITICAL)
+    await this.playByBaseName('alert-critical', volume)
   }
 
   /**
    * 成功音
    */
   async playSuccess() {
-    await this.playByBaseName('success', 0.6)
+    const volume = this.calculateVolume('success', VOLUME.SUCCESS)
+    await this.playByBaseName('success', volume)
   }
 
   /**
@@ -228,7 +284,8 @@ export class SoundManager {
    * エラー音
    */
   async playError() {
-    await this.playByBaseName('error', 0.7)
+    const volume = this.calculateVolume('error', VOLUME.ERROR)
+    await this.playByBaseName('error', volume)
   }
 
   /**
@@ -242,14 +299,16 @@ export class SoundManager {
    * 情報音（軽い通知）
    */
   async playInfo() {
-    await this.playByBaseName('info', 0.5)
+    const volume = this.calculateVolume('info', VOLUME.INFO)
+    await this.playByBaseName('info', volume)
   }
 
   /**
    * システム起動音
    */
   async playSystemStart() {
-    await this.playByBaseName('system-start', 0.7)
+    const volume = this.calculateVolume('system-start', VOLUME.SYSTEM_START)
+    await this.playByBaseName('system-start', volume)
   }
 
   /**
@@ -280,6 +339,8 @@ export class SoundManager {
    */
   toggleMute() {
     this.isMuted = !this.isMuted
+    this.settings.isMuted = this.isMuted
+    this.saveSettings()
     return this.isMuted
   }
 
@@ -288,6 +349,8 @@ export class SoundManager {
    */
   setMuted(muted: boolean) {
     this.isMuted = muted
+    this.settings.isMuted = muted
+    this.saveSettings()
   }
 
   /**
@@ -295,6 +358,50 @@ export class SoundManager {
    */
   isSoundMuted(): boolean {
     return this.isMuted
+  }
+
+  /**
+   * マスター音量を設定
+   */
+  setMasterVolume(volume: number) {
+    this.settings.masterVolume = Math.max(0, Math.min(1, volume))
+    this.saveSettings()
+  }
+
+  /**
+   * マスター音量を取得
+   */
+  getMasterVolume(): number {
+    return this.settings.masterVolume
+  }
+
+  /**
+   * 個別音声の音量を設定
+   */
+  setSoundVolume(soundName: SoundFileName, volume: number) {
+    this.settings.soundVolumes[soundName] = Math.max(0, Math.min(1, volume))
+    this.saveSettings()
+  }
+
+  /**
+   * 個別音声の音量を取得
+   */
+  getSoundVolume(soundName: SoundFileName): number {
+    return this.settings.soundVolumes[soundName] ?? SOUND_FILES[soundName].volume
+  }
+
+  /**
+   * 全設定を取得
+   */
+  getSettings(): SoundSettings {
+    return { ...this.settings }
+  }
+
+  /**
+   * 設定を保存
+   */
+  private saveSettings() {
+    saveSoundSettings(this.settings)
   }
 }
 
