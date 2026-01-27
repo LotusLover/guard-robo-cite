@@ -93,6 +93,18 @@ export const SKELETON = {
   ALERT_CARDS_COUNT: 2,                    // スケルトン表示するアラートカード数
 } as const
 
+/** ページネーション設定 */
+export const PAGINATION = {
+  ITEMS_PER_PAGE: 10,                      // 1ページあたりのアイテム数
+  MAX_PAGES_DISPLAY: 5,                    // ページャーに表示する最大ページ数
+} as const
+
+/** タブ設定 */
+export const TABS = {
+  DEFAULT_TAB: 'active-alerts' as const,   // デフォルトで表示するタブ
+  ANIMATION_DURATION: 300,                 // タブ切り替えアニメーション時間（ms）
+} as const
+
 // ==================== localStorage キー ====================
 
 export const STORAGE_KEYS = {
