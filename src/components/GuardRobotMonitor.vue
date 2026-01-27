@@ -297,25 +297,25 @@ const activeAlerts = computed(() => alerts.value.filter(a => a.status === 'activ
 // タブ設定
 const tabs = computed(() => [
   { 
-    id: 'active-alerts', 
+    id: 'active-alerts' as const, 
     label: 'アクティブ', 
     icon: '🔴', 
     badge: activeAlerts.value 
   },
   { 
-    id: 'archive', 
+    id: 'archive' as const, 
     label: 'アーカイブ', 
     icon: '📋', 
     badge: 0 
   },
   { 
-    id: 'robots', 
+    id: 'robots' as const, 
     label: 'ロボット', 
     icon: '🤖', 
     badge: totalRobots.value - onlineRobots.value 
   },
   { 
-    id: 'dashboard', 
+    id: 'dashboard' as const, 
     label: '統計', 
     icon: '📊', 
     badge: 0 
